@@ -2,4 +2,4 @@
 Wgraj cały folder na hosting HTTPS (Vercel, Netlify, GitHub Pages).
 Telefon: Gracze -> "Utwórz pokój" (pokazuje 4-znakowy kod, wpisuje rzuty).
 Laptop: Gracze -> wpisz kod -> "Wyszukaj pokój" (przełącza się w tryb ekranu).
-Połączenie P2P (WebRTC) przez publiczny broker PeerJS; nie wymaga wspólnej sieci ani konta.
+Połączenie przez publiczny broker MQTT (broker.emqx.io), działa między dowolnymi sieciami.

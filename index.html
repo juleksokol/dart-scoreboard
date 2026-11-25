@@ -48,7 +48,7 @@ input[type=checkbox]{width:22px;height:22px}
 .disp nav,.disp .main>div:nth-child(2){display:none}.disp .main{grid-template-columns:1fr}.disp #wrap{max-width:none}
 .disp .rem{font-size:clamp(90px,18vw,240px)}.disp .pl b{font-size:clamp(22px,3vw,44px)}.disp .pl small{font-size:clamp(14px,1.8vw,26px)}
 .disp .chip{font-size:clamp(20px,3vw,40px)}.disp .hint{font-size:clamp(16px,2.4vw,32px)}
-</style><script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script></head><body>
+</style><script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script></head><body>
 <div id="wrap"><nav id="tabs"></nav><div id="app"></div></div><div id="ov"></div><div id="msg"></div>
 <script>
 const $=s=>document.querySelector(s),LS='dart501',uid=()=>Math.random().toString(36).slice(2,9);
@@ -227,41 +227,38 @@ function vHist(){
 /* blokada uśpienia */
 let wl;async function lock(){try{if(!wl||wl.released)wl=await navigator.wakeLock.request('screen')}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&G&&!G.win)lock()});
-/* pokój: połączenie bezpośrednie urządzenie-urządzenie (WebRTC przez PeerJS) */
-let ROLE=null,ROOM=null,ST='',PR=null,CONS=[],rT;
-const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},{urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'}]};
-const AL='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',pid=c=>'dart501-'+c;
-const noLib=()=>{if(typeof Peer=='undefined'){toast('Brak biblioteki połączenia (sprawdź internet)');return true}};
+/* pokój: wiadomości przez publiczny broker MQTT (WSS) – działa między dowolnymi sieciami */
+let ROLE=null,ROOM=null,ST='',MC=null;
+const BROKER='wss://broker.emqx.io:8084/mqtt',AL='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',tp=c=>'dart501/'+c+'/state',hi=c=>'dart501/'+c+'/hi';
+const noLib=()=>{if(typeof mqtt=='undefined'){toast('Brak biblioteki połączenia (sprawdź internet)');return true}};
 const bar=()=>`<div class="row"><b>Ekran · pokój ${ROOM}</b><small>${esc(ST)}</small><button data-a="rleave" style="margin-left:auto">Opuść</button></div>`;
 function push(){}
 function snap(){return{g:JSON.stringify(G),n:Object.fromEntries(DB.players.map(p=>[p.id,p.name]))}}
-function pushG(){if(ROLE!='host')return;CONS=CONS.filter(c=>c.open);const m=snap();CONS.forEach(c=>{try{c.send(m)}catch(e){}})}
-function kill(){clearTimeout(rT);const p=PR;PR=null;try{p&&p.destroy()}catch(e){}}
-function leave(){const wasD=ROLE=='display';kill();CONS=[];ROLE=null;ROOM=null;ST='';DB.role=null;DB.code=null;
+function pushG(){if(ROLE=='host'&&MC&&MC.connected)MC.publish(tp(ROOM),JSON.stringify(snap()),{retain:true,qos:1})}
+function kill(clear){const m=MC;MC=null;if(!m)return;try{if(clear&&m.connected)m.publish(tp(ROOM),'',{retain:true,qos:1},()=>m.end(true));else m.end(true)}catch(e){}}
+function conn(up){
+ const m=MC=mqtt.connect(BROKER,{clientId:'d5-'+uid()+uid(),clean:true,reconnectPeriod:2000,connectTimeout:10000,keepalive:30});
+ m.on('connect',()=>{if(MC===m)up(m)});
+ m.on('reconnect',()=>{if(MC===m){ST='Łączę z serwerem…';render()}});
+ m.on('error',()=>{if(MC===m){ST='Błąd połączenia z serwerem';render()}});
+ return m}
+function leave(){const wasD=ROLE=='display',wasH=ROLE=='host';kill(wasH);ROLE=null;ROOM=null;ST='';DB.role=null;DB.code=null;
  document.body.classList.remove('disp');if(wasD){G=null;DB.game=null;DB.und=[]}tab='setup';save(1);render()}
 function hostRoom(code){
- if(noLib())return;kill();const given=!!code;
+ if(noLib())return;kill();
  code=code||Array.from({length:4},()=>AL[Math.floor(Math.random()*AL.length)]).join('');
- ROLE='host';ROOM=code;ST='Łączenie z mostem…';DB.role='host';DB.code=code;save(1);render();
- const p=PR=new Peer(pid(code),{config:ICE});
- p.on('open',()=>{ST='Pokój gotowy – czekam na ekran';render()});
- p.on('connection',c=>{c.on('open',()=>{CONS.push(c);ST='Ekran połączony';c.send(snap());render()});
-  c.on('close',()=>{CONS=CONS.filter(x=>x!==c&&x.open);if(!CONS.length)ST='Ekran rozłączony – czekam';render()})});
- p.on('error',e=>{if(PR!==p)return;if(e.type=='unavailable-id'){if(given)rT=setTimeout(()=>hostRoom(code),3000);else hostRoom()}else{ST='Błąd: '+e.type;render()}});
- p.on('disconnected',()=>{try{p.reconnect()}catch(x){}})}
+ ROLE='host';ROOM=code;ST='Łączę z serwerem…';DB.role='host';DB.code=code;save(1);render();
+ const m=conn(m=>{ST='Pokój gotowy – wpisz kod na drugim urządzeniu';m.subscribe(hi(code));render();pushG()});
+ m.on('message',t=>{if(t==hi(code)){ST='Ekran połączony';render();pushG()}})}
 function joinRoom(code){
  code=(code||'').trim().toUpperCase();if(!code){toast('Wpisz kod pokoju');return}
- if(noLib())return;kill();CONS=[];
- ROLE='display';ROOM=code;DB.role='display';DB.code=code;G=null;tab='game';ST='Szukam pokoju…';
+ if(noLib())return;kill();
+ ROLE='display';ROOM=code;DB.role='display';DB.code=code;G=null;tab='game';ST='Łączę z serwerem…';
  document.body.classList.add('disp');save(1);render();
- const p=PR=new Peer(undefined,{config:ICE});
- const retry=()=>{if(PR!==p||ROLE!='display')return;clearTimeout(rT);ST='Szukam pokoju…';render();rT=setTimeout(()=>{if(PR===p&&ROLE=='display')joinRoom(code)},3000)};
- p.on('open',()=>{const c=p.connect(pid(code),{reliable:true});
-  c.on('open',()=>{ST='Połączono';render()});
-  c.on('data',d=>{const had=!!G,n=had?G.turns.length:0;Object.assign(NM,d.n||{});G=JSON.parse(d.g);render();
-   if(had&&G&&G.turns.length>n){const q=G.turns[G.turns.length-1];showOv(q.co?(G.win?'WYGRANA!':'LEG!'):q.bust?'BUST':''+G.rem[q.p],'Zdobyto: '+q.t+' pkt',name(q.p),q.co?'win':q.bust?'bust':'',q.d,'',false)}});
-  c.on('close',retry);c.on('error',retry)});
- p.on('error',retry)}
+ const m=conn(m=>{ST='Połączono z serwerem – czekam na dane pokoju';render();m.subscribe(tp(code),{qos:1});m.publish(hi(code),'1')});
+ m.on('message',(t,b)=>{if(t!=tp(code))return;const s=b.toString();if(!s)return;
+  try{const d=JSON.parse(s),had=!!G,n=had?G.turns.length:0;Object.assign(NM,d.n||{});G=JSON.parse(d.g);ST='Połączono';render();
+   if(had&&G&&G.turns.length>n){const q=G.turns[G.turns.length-1];showOv(q.co?(G.win?'WYGRANA!':'LEG!'):q.bust?'BUST':''+G.rem[q.p],'Zdobyto: '+q.t+' pkt',name(q.p),q.co?'win':q.bust?'bust':'',q.d,'',false)}}catch(e){}})}
 if(DB.role=='host'&&DB.code)hostRoom(DB.code);else if(DB.role=='display'&&DB.code)joinRoom(DB.code);
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 document.addEventListener('keydown',e=>{if(e.key=='Enter'&&e.target.id=='newp')document.querySelector('[data-a=add]').click()});
