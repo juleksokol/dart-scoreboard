@@ -155,7 +155,7 @@ ${G&&!G.win?'<button class="big" style="background:var(--card);color:var(--tx)" 
 <div class="row"><button data-a="exp">Eksport</button><button data-a="imp">Import</button></div>
 <small>Dane są zapisane w pamięci tej przeglądarki. Aby przenieść je na inne urządzenie: Eksport → skopiuj tekst → Import na drugim urządzeniu.</small></section>`}
 function vGame(){
- if(!G)return'<section class="card"><p>Brak aktywnej gry. Wybierz graczy w zakładce Gracze i naciśnij Start.</p></section>';
+ if(!G)return ROLE=='display'?`<section class="card"><p><b>${esc(ST)}</b></p><p>Pokój ${ROOM}. Gdy na drugim urządzeniu zaczniesz grę (Gracze → Start), wynik pojawi się tutaj.</p></section>`:'<section class="card"><p>Brak aktywnej gry. Wybierz graczy w zakładce Gracze i naciśnij Start.</p></section>';
  const cs=G.cur.reduce((a,d)=>a+d.pts,0),aid=G.ids[G.i];
  const sb=G.ids.map(id=>{const r=G.cfg.mode=='atc'?tg(G.rem[id]):G.rem[id]-(id==aid?cs:0),ts=G.turns.filter(t=>t.p==id),
   av=ts.length?(ts.reduce((a,t)=>a+t.t,0)/ts.reduce((a,t)=>a+t.d.length,0)*3).toFixed(1):'–';
