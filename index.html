@@ -45,8 +45,8 @@ input[type=checkbox]{width:22px;height:22px}
 .ovd .k2 small{color:#3b2a00;opacity:.75}.ovd .k3 small{opacity:.85}
 .ovh{font-size:clamp(18px,4.5vw,28px);font-weight:700;padding:8px 14px;border-radius:12px;background:rgba(255,255,255,.18)}
 #msg{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:10px;display:none;z-index:9}
-.dbs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}.dbs>div{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px;text-align:center}
-.dbs b{display:block;margin-bottom:6px;font-size:clamp(15px,1.8vw,26px)}.dbs .bd{max-width:none}@media(max-width:700px){.dbs{grid-template-columns:1fr}}
+.dbs{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}.dbs>div{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px;text-align:center}
+.dbs b{display:block;margin-bottom:6px;font-size:clamp(15px,1.8vw,26px)}.dbs .bd{max-width:min(72vh,640px)}@media(max-width:700px){.dbs{grid-template-columns:1fr}}
 .disp nav,.disp .main>div:nth-child(2){display:none}.disp .main{grid-template-columns:1fr}.disp #wrap{max-width:none}
 .disp .rem{font-size:clamp(90px,18vw,240px)}.disp .pl b{font-size:clamp(22px,3vw,44px)}.disp .pl small{font-size:clamp(14px,1.8vw,26px)}
 .disp .chip{font-size:clamp(20px,3vw,40px)}.disp .hint{font-size:clamp(16px,2.4vw,32px)}
@@ -238,14 +238,15 @@ function coList(r,j){const D=G.cfg.dout,res=[];
  for(const d of MID)if(d[1]<r-(D?1:0))for(const p of coList(r-d[1],j-1))res.push([d[0],...p]);return res}
 function coTwo(r,k){let c=[];for(let j=1;j<=k;j++)c=c.concat(coList(r,j));if(!c.length)return[];
  const K=p=>p.slice().sort().join(),a=c[0],d=p=>K(p)!=K(a),b=c.find(p=>p.length==a.length&&d(p)&&p[p.length-1]!=a[a.length-1])||c.find(p=>p.length==a.length&&d(p))||c.find(d);return b?[a,b]:[a]}
-function dboards(id,cs){
- if(G.cfg.mode=='atc'||G.win)return'';const r=G.rem[id]-cs,k=3-G.cur.length;
- if(r>170||r<(G.cfg.dout?2:1)||k<1)return'';
- const ps=coTwo(r,k);if(!ps.length)return`<div class="card"><b>${esc(hintText(r,k))}</b></div>`;
- return`<div class="dbs">${ps.map((p,i)=>{const hit={},mk=[];
-  p.forEach((s,j)=>{const[n,m]=parseD(s),key=n+'_'+m;(hit[key]=hit[key]||[]).push(j+1);mk.push([n,m,j+1])});
-  const f=(n,m,ii)=>{const h=hit[n+'_'+m];return h?HC[h[0]-1]:`color-mix(in srgb,${gf(n,m,ii)} 28%,#0b0f14)`};
-  return`<div><b>Opcja ${'AB'[i]}: ${p.join(' – ')}</b>${board(f,false,mk)}</div>`}).join('')}</div>`}
+function dboards(aid,cs){
+ if(G.cfg.mode=='atc'||G.win)return'';
+ const mn=G.cfg.dout?2:1,can=id=>{const r=G.rem[id]-(id==aid?cs:0);return r<=170&&r>=mn};
+ if(!G.ids.some(can))return'';
+ const r=G.rem[aid]-cs,k=3-G.cur.length,p=can(aid)&&k>0?coTwo(r,k)[0]:null,hit={},mk=[];
+ if(p)p.forEach((s,j)=>{const[n,m]=parseD(s),key=n+'_'+m;(hit[key]=hit[key]||[]).push(j+1);mk.push([n,m,j+1])});
+ const f=(n,m,ii)=>{const h=hit[n+'_'+m];return h?HC[h[0]-1]:`color-mix(in srgb,${gf(n,m,ii)} 28%,#0b0f14)`};
+ const cap=p?p.join(' – '):(can(aid)?hintText(r,k):'brak zamknięcia w tej turze (zostało '+r+')');
+ return`<div class="dbs"><div><b>${esc(name(aid))}: ${esc(cap)}</b>${board(f,false,mk)}</div></div>`}
 /* blokada uśpienia */
 let wl;async function lock(){try{if(!wl||wl.released)wl=await navigator.wakeLock.request('screen')}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&G&&!G.win)lock()});
