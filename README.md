@@ -10,3 +10,12 @@ Połączenie przez publiczny broker MQTT (broker.emqx.io), działa między dowol
 - Kto zaczyna: wg kolejności wyboru lub losowo (Gracze -> Tryb gry).
 - Poprawa rzutu w trakcie tury: dotknij chipa „Rzut 1/2/3” i wybierz poprawny rzut.
 - Gracze i mecze mają drugą kopię w IndexedDB (odtwarzanie, gdy przeglądarka wyczyści localStorage).
+
+## Zmiany (v11) – ekran TV
+- Osobny układ pod telewizor: gracze po lewej, tarcza i bieżąca tura po prawej, wszystko skalowane do wysokości ekranu.
+- Pełny ekran (przycisk, Enter lub F), wskaźnik połączenia, duży kod pokoju na ekranie oczekiwania.
+- Tarcza zawsze widoczna: trasa zamknięcia, rzuty z bieżącej tury albo cel w Around the Clock.
+- Pasek meczu: leg, sety, legi, kto zaczyna i kto rzuca. Ostatnia tura pod tarczą.
+- Duże ogłoszenia: 180, High Finish, LEG, BUST. Powtórka tury na tarczy z numerami rzutów.
+- Statystyki na żywo przy graczach: średnia meczu i lega, najwyższa tura, liczba 180.
+- Podsumowanie meczu na pełnym ekranie. Na telefonie przycisk „Rewanż” (zaczyna drugi gracz).
